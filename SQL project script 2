@@ -1,0 +1,21 @@
+Initial Data Overview
+
+Total number of tenants: 
+SELECT 
+COUNT(*) AS total_rows,
+COUNT(DISTINCT tenant_name) AS unique_tenants
+FROM mega_sales;
+
+Review of duplicates: 
+SELECT tenant_name, COUNT(*) as cnt
+FROM mega_sales
+GROUP BY tenant_name
+HAVING cnt > 1
+ORDER BY cnt DESC;
+
+umber of categories, subcategories and categories sqm:
+select count(distinct category) as total_categories from mega_sales ms; 
+select count(distinct subcategory) as total_subcategories from mega_sales ms; 
+select count(distinct category_sqm) as total_category_sqm from mega_sales ms; 
+
+
