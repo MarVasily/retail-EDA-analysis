@@ -1,10 +1,10 @@
-📊 Retail Performance Analysis (EDA Project / Version 1.1)
+📊 **Retail Performance Analysis (EDA Project / Version 1.1)**
 
 This project presents an exploratory data analysis (EDA) of a large retail shopping center with a focus on tenant performance and operational indicators.
 
 The analysis aims to identify relationships between tenant sales, rental conditions, space characteristics, and other key business factors. The project is based on real-world retail logic and emphasizes business-oriented insights rather than purely technical exploration.
 
-❗**For confidentility reasons, all data used in this project is anonymized and partially synthesized, while preserving realistic distributions, relationships and business logic.**
+❗ **For confidentility reasons, all data used in this project is anonymized and partially synthesized, while preserving realistic distributions, relationships and business logic.**
 
 Key focus areas:
 - Data cleaning and preparation
