@@ -1,0 +1,356 @@
+-- RENT RANGE PER SUBCATEGORY AND CATEGORY_SQM --
+create temporary table ranges_table as
+SELECT subcategory, category_sqm, sum(leased_area) as total_leased_area,
+count(tenant_name) as total_tenant, 
+round(avg(rent_sqm),0) AS avg_rent_sqm, 
+ROUND(MIN(rent_sqm), 0) as min_rent_sqm, ROUND(MAX(rent_sqm),0) as max_rent_sqm, 
+ROUND(MAX(rent_sqm),0) - ROUND(MIN(rent_sqm), 0) as rent_range
+from mega_sales
+GROUP BY subcategory, category_sqm
+having total_tenant >1
+order by subcategory, total_tenant desc, rent_range desc;
+
+-- TENANTS WITH MIN AND MAX RENT BY SUBCATEGORY AND CATEGORY_SQM -- 
+create temporary table  min_max_rents as
+WITH ranked AS (
+    SELECT 
+        subcategory,
+        Category_sqm,
+        tenant_name,
+        leased_area,
+        ocr_2010,
+        ocr_2011,
+        rent_sqm,
+        ROW_NUMBER() OVER (PARTITION BY subcategory, Category_sqm ORDER BY rent_sqm) AS rn_asc,     
+        ROW_NUMBER() OVER (PARTITION BY subcategory, Category_sqm ORDER BY rent_sqm DESC) AS rn_desc 
+    FROM mega_sales
+    WHERE rent_sqm IS NOT NULL
+)
+SELECT 
+    subcategory,
+    Category_sqm,
+    MAX(CASE WHEN rn_asc = 1 THEN tenant_name END) AS tenant_min_rent,
+    MIN(CASE WHEN rn_asc = 1 THEN rent_sqm END) AS min_rent_sqm,
+    MAX(CASE WHEN rn_asc = 1 THEN leased_area END) AS leased_area_min,
+    MAX(CASE WHEN rn_asc = 1 THEN ocr_2010 END) AS ocr_2010_min,
+    MAX(CASE WHEN rn_asc = 1 THEN ocr_2011 END) AS ocr_2011_min,
+    MAX(CASE WHEN rn_desc = 1 THEN tenant_name END) AS tenant_max_rent,
+    MAX(CASE WHEN rn_desc = 1 THEN rent_sqm END) AS max_rent_sqm,
+    MAX(CASE WHEN rn_desc = 1 THEN leased_area END) AS leased_area_max,
+    MAX(CASE WHEN rn_desc = 1 THEN ocr_2010 END) AS ocr_2010_max,
+    MAX(CASE WHEN rn_desc = 1 THEN ocr_2011 END) AS ocr_2011_max,
+    COUNT(*) AS total_tenants_in_group
+FROM ranked
+GROUP BY subcategory, Category_sqm
+HAVING total_tenants_in_group >= 2
+ORDER BY 
+    subcategory, total_tenants_in_group DESC,
+    CASE Category_sqm
+        WHEN '<50' THEN 1
+        WHEN '50<X<100' THEN 2
+        WHEN '100<X<250' THEN 3
+        WHEN '250<X<500' THEN 4
+        WHEN '500<X<1000' THEN 5
+        WHEN '1000<X<2500' THEN 6
+        WHEN '2500<X<5000' THEN 7
+        ELSE 8
+    END;
+
+select * from min_max_rents; -- 67 lines --
+
+select * from ranges_table; -- 67 lines --
+
+create temporary table rents_ranges_temp as
+SELECT 
+    m.*,
+    m2.Total_leased_area,
+    m2.avg_rent_sqm,
+    m2.rent_range
+    FROM min_max_rents m
+LEFT JOIN ranges_table m2
+    ON m.subcategory   = m2.subcategory
+   AND m.category_sqm  = m2.category_sqm;
+
+-- CREATING TEMPORARY / PERMANENT TABLES --
+create table rents_ranges as 
+select * from rents_ranges_temp;
+select * from rents_ranges rr;
+
+
+OCR ADJUSTMENTS
+
+-- CREATE OCR ADJUSTED TABLE 2010 --
+create temporary table OCR_adj_2010_temp as
+SELECT 
+    tenant_name,
+    category,
+    leased_area,
+    rent_per_year, 
+    rent_sqm,
+    start_date_tnr,
+    '2010-08-31' AS fy2010_end, GREATEST(COALESCE(start_date_tnr, '2009-09-01'),'2009-09-01') AS effective_start_date,
+       GREATEST(0, DATEDIFF('2010-08-31', GREATEST(COALESCE(start_date_tnr, '2009-09-01'), '2009-09-01'))) AS days_active_in_fy2010,
+        ROUND(rent_per_year * GREATEST(0, DATEDIFF('2010-08-31', GREATEST(COALESCE(start_date_tnr, '2009-09-01'), '2009-09-01'))) / 365.0,
+        2) AS adjusted_rent_fy2010, sales_2010 AS total_sales_fy2010,
+        ROUND( CASE 
+	        WHEN sales_2010 <= 0 OR sales_2010 IS NULL THEN NULL
+            ELSE (rent_per_year * GREATEST(0, DATEDIFF('2010-08-31', GREATEST(COALESCE(start_date_tnr, '2009-09-01'), '2009-09-01'))) / 365.0) 
+                / sales_2010 * 100 
+        END,2) AS adjusted_OCR_fy2010_percent
+FROM mega_sales
+WHERE sales_2010 IS NOT NULL
+ORDER BY adjusted_OCR_fy2010_percent DESC;
+
+select * from OCR_adj_2010_temp;
+
+-- CREATE OCR ADJUSTED TABLE 2011--
+create temporary table OCR_adj_2011_temp as
+SELECT 
+    tenant_name,
+    category,
+    leased_area,
+    rent_sqm,
+    rent_per_year,
+    start_date_tnr,
+    '2011-08-31' AS fy2011_end,
+            GREATEST(
+        COALESCE(start_date_tnr, '2010-09-01'),
+        '2010-09-01'
+    ) AS effective_start_date,
+        GREATEST(
+        0,
+        DATEDIFF('2011-08-31', GREATEST(COALESCE(start_date_tnr, '2010-09-01'), '2010-09-01'))
+    ) AS days_active_in_fy2011,
+        ROUND(
+        rent_per_year * 
+        GREATEST(0, DATEDIFF('2011-08-31', GREATEST(COALESCE(start_date_tnr, '2010-09-01'), '2010-09-01'))) / 365.0,
+        2
+    ) AS adjusted_rent_fy2011,
+        sales_2011 AS total_sales_fy2011,
+    ROUND(
+        CASE 
+            WHEN sales_2011 <= 0 OR sales_2011 IS NULL THEN NULL
+            ELSE 
+                (rent_per_year * GREATEST(0, DATEDIFF('2011-08-31', GREATEST(COALESCE(start_date_tnr, '2010-09-01'), '2010-09-01'))) / 365.0) 
+                / sales_2011 * 100 
+        END,
+        2
+    ) AS adjusted_OCR_fy2011_percent
+FROM mega_sales
+WHERE sales_2011 IS NOT NULL
+ORDER BY adjusted_OCR_fy2011_percent DESC;
+
+select * from OCR_adj_2011_temp;
+
+-- QUERY TO CREATE ocr_trend_temp TABLE TO SHOW THE FULL PICTURE OF OCR ADJUSTMENTS --
+create temporary table ocr_trend_temp as  
+SELECT DISTINCT
+    tenant_name,
+    category,
+    ocr_2010_pct,
+    ocr_2011_pct,
+    ocr_trend_pct,
+    trend_status,
+    sales_2010,
+    sales_2011,
+    adjusted_rent_2010,
+    adjusted_rent_2011
+FROM (
+    SELECT 
+        COALESCE(a.tenant_name, b.tenant_name) AS tenant_name,
+        COALESCE(a.category, b.category) AS category,
+        a.adjusted_OCR_fy2010_percent AS ocr_2010_pct,
+        b.adjusted_OCR_fy2011_percent AS ocr_2011_pct,
+        ROUND(
+            COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0),
+            2
+        ) AS ocr_trend_pct,
+        CASE
+            WHEN COALESCE(a.adjusted_OCR_fy2010_percent, 0) = 0 THEN  -- Special case: ocr_2010 = 0 or NULL
+                CASE
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) > 50 
+                        THEN 'High Startup Risk'
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) BETWEEN 0 AND 50 
+                        THEN 'Moderate Startup Phase'
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) < 0 
+                        THEN 'Improvement'
+                    ELSE 'Stable'
+                END
+            ELSE  
+                CASE
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) > 100 
+                        THEN 'Critical Deterioration'
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) BETWEEN 50 AND 100 
+                        THEN 'Severe Deterioration'
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) BETWEEN 0 AND 50 
+                        THEN 'Moderate Concern'
+                    WHEN ROUND(COALESCE(b.adjusted_OCR_fy2011_percent, 0) - COALESCE(a.adjusted_OCR_fy2010_percent, 0), 2) < 0 
+                        THEN 'Improvement'
+                    ELSE 'Stable'
+                END
+        END AS trend_status,
+        a.total_sales_fy2010 AS sales_2010,
+        b.total_sales_fy2011 AS sales_2011,
+        a.adjusted_rent_fy2010 AS adjusted_rent_2010,
+        b.adjusted_rent_fy2011 AS adjusted_rent_2011
+    FROM OCR_adj_2010_temp a
+    LEFT JOIN ocr_adj_2011_temp b ON a.tenant_name = b.tenant_name
+) t
+ORDER BY ocr_trend_pct DESC;
+
+select * from ocr_trend_temp;
+
+-- TURNOVER TENANTS --
+select* from mega_sales ms;
+-- CREATE TEMP TABLE TNR 2010--
+create temporary table temp_tnr_2010 as
+select tenant_name,
+category,
+subcategory,
+category_sqm,
+tnr_perc,
+start_date_tnr,
+end_date_tnr,
+leased_area,
+build_phase,
+rent_sqm,
+rent_per_year,
+natural_bp,
+sales_2010,
+OCR_2010,
+tnr_fee2010 from mega_sales
+where tnr_fee2010 !=0 or tnr_fee2010 is not null;
+select * from temp_tnr_2010;
+
+/* create table tnr_2010 as select * from temp_tnr_2010;
+select * from tnr_2010 t;
+
+--ADDING THE MISSING COLUMN --
+alter table tnr_2010 add column total_rent2010 decimal(18,2) null after tnr_fee2010;
+update tnr_2010 set 
+total_rent2010 = rent_per_year + tnr_fee2010;*/
+
+-- CREATE TEMP TABLE TNR 2011--
+create temporary table temp_tnr_2011 as
+select tenant_name,
+category,
+subcategory,
+category_sqm,
+tnr_perc,
+start_date_tnr,
+end_date_tnr,
+leased_area,
+build_phase,
+rent_sqm,
+rent_per_year,
+natural_bp,
+sales_2011,
+OCR_2011,
+tnr_fee2011 from mega_sales
+where tnr_fee2011 !=0 or tnr_fee2011 is not null;
+
+/* select * from temp_tnr_2011;
+create table tnr_2011 as select * from temp_tnr_2011;
+select * from tnr_2011;
+
+-- ADDING THE MISSING COLUMN --
+alter table tnr_2011 add column total_rent2011 decimal(18,2) null after tnr_fee2011;
+update tnr_2011 set 
+total_rent2011 = rent_per_year + tnr_fee2011;*/
+
+create temporary table tenants_tnr_table as SELECT 
+    COALESCE(t.tenant_name, t2.tenant_name) AS tenant_name,
+    COALESCE(t.category, t2.category) AS category,
+    COALESCE(t.leased_area, t2.leased_area) AS leased_area,
+    COALESCE(t.build_phase, t2.build_phase) as build_phase,
+    COALESCE(t.rent_sqm, t2.rent_sqm) as rent_sqm,
+    coalesce(t.tnr_perc, t2.tnr_perc) as tnr_percent,
+    coalesce(t.rent_per_year, t2.rent_per_year) as rent_per_year,
+    t.sales_2010,
+    t2.sales_2011,    
+    OCR_2010,
+    OCR_2011,
+    t.total_rent2010,
+    total_rent2011
+FROM tnr_2010 t
+LEFT JOIN tnr_2011 t2 ON t.tenant_name = t2.tenant_name
+UNION
+SELECT 
+    COALESCE(t.tenant_name, t2.tenant_name) AS tenant_name,
+    COALESCE(t.category, t2.category) AS category,
+    COALESCE(t.leased_area, t2.leased_area) AS leased_area,
+    COALESCE(t.build_phase, t2.build_phase) as build_phase,
+    COALESCE(t.rent_sqm, t2.rent_sqm) as rent_sqm,
+    coalesce(t.tnr_perc, t2.tnr_perc) as tnr_percent,
+    coalesce(t.rent_per_year, t2.rent_per_year) as rent_per_year,
+    sales_2010,
+    sales_2011,
+    OCR_2010,
+    OCR_2011,
+    total_rent2010,
+    t2.total_rent2011
+FROM tnr_2010 t 
+RIGHT JOIN tnr_2011 t2 ON t.tenant_name = t2.tenant_name
+WHERE t.tenant_name IS null
+order by tenant_name;
+
+select * from tenants_tnr_table;
+
+-- QUERY -- 
+create temporary table tnr_stat_table as
+SELECT
+    SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN rent_per_year ELSE 0 END) AS total_fixed_rent_2010,
+    SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN rent_per_year ELSE 0 END) AS total_fixed_rent_2011,
+    SUM(COALESCE(total_rent2010, 0)) AS total_tnr_2010,
+    SUM(COALESCE(total_rent2011, 0)) AS total_tnr_2011,
+    SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN COALESCE(total_rent2010, 0) ELSE 0 END)
+      - SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN rent_per_year ELSE 0 END) AS income_2010,
+       SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN COALESCE(total_rent2011, 0) ELSE 0 END)
+      - SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN rent_per_year ELSE 0 END) AS income_2011,
+        ROUND(
+        CASE
+            WHEN SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN rent_per_year ELSE 0 END) = 0 THEN NULL
+            ELSE
+                (SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN COALESCE(total_rent2010, 0) ELSE 0 END)
+                 - SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN rent_per_year ELSE 0 END)) * 100.0
+                 / SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN rent_per_year ELSE 0 END)
+        END,
+        2
+    ) AS income2010_perc,
+        ROUND(
+        CASE
+            WHEN SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN rent_per_year ELSE 0 END) = 0 THEN NULL
+            ELSE
+                (SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN COALESCE(total_rent2011, 0) ELSE 0 END)
+                 - SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN rent_per_year ELSE 0 END)) * 100.0
+                 / SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN rent_per_year ELSE 0 END)
+        END,
+        2
+    ) AS income2011_perc,
+        -- Turnover Share = income / total_tnr_XXXX × 100 (это даёт 55.57 и 61.64)
+    ROUND(
+        CASE
+            WHEN SUM(COALESCE(total_rent2010, 0)) = 0 THEN NULL
+            ELSE
+                (SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN COALESCE(total_rent2010, 0) ELSE 0 END)
+                 - SUM(CASE WHEN COALESCE(sales_2010, 0) > 0 THEN rent_per_year ELSE 0 END))
+                * 100.0
+                / SUM(COALESCE(total_rent2010, 0))
+        END,
+        2
+    ) AS turnover_share_total_rent_2010,
+        ROUND(
+        CASE
+            WHEN SUM(COALESCE(total_rent2011, 0)) = 0 THEN NULL
+            ELSE
+                (SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN COALESCE(total_rent2011, 0) ELSE 0 END)
+                 - SUM(CASE WHEN COALESCE(sales_2011, 0) > 0 THEN rent_per_year ELSE 0 END))
+                * 100.0
+                / SUM(COALESCE(total_rent2011, 0))
+        END,
+        2
+    ) AS turnover_share_total_rent_2011
+FROM tenants_tnr_table;
+
+create table tnr_stat as select * from tnr_stat_table;
+select* from tnr_stat ts;
