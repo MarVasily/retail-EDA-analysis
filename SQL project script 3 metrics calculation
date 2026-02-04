@@ -57,3 +57,20 @@ SELECT tenant_name, category, leased_area, rent_sqm, rent_per_year, ocr_2011, sa
 FROM mega_sales ms 
 WHERE ocr_2011 > 20
 ORDER by ocr_2011 desc;
+
+-- 7 NATURAL BREAKPOINT FOR TURNOVER --
+alter table mega_sales add column natural_BP decimal (18,2) null after rent_per_year;
+update mega_sales set natural_BP=rent_per_year / (coalesce(tnr_perc)/100)
+where tnr_perc is not null or tnr_perc !=0;
+
+-- 8 TURNOVER FEE --
+alter table mega_sales add column tnr_fee2010 decimal (18,2) null after ocr_2010,
+add column tnr_fee2011 decimal (18,2) null after ocr_2011; 
+update mega_sales set
+tnr_fee2010 =(sales_2010-Natural_BP)*tnr_perc/100
+where sales_2010 > natural_BP;
+
+update mega_sales set
+tnr_fee2011 =(sales_2011-Natural_BP)*tnr_perc/100
+where sales_2011 > natural_BP;
+
