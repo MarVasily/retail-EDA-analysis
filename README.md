@@ -1,4 +1,4 @@
-📊 Retail Performance Analysis (EDA Project)
+📊 Retail Performance Analysis (EDA Project / Version 1.1)
 
 This project presents an exploratory data analysis (EDA) of a large retail shopping center with a focus on tenant performance and operational indicators.
 
