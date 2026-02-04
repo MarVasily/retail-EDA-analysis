@@ -1,0 +1,73 @@
+
+use world;
+CREATE TABLE Mega_sales (
+    `tenant_name` VARCHAR(255) NOT NULL,         
+    `category` TEXT,
+    `subcategory` TEXT,
+    `premise` TEXT,
+    `Category_sqm` TEXT,
+    `tnr_tenant` TEXT,
+    `tnr_perc` DOUBLE DEFAULT NULL,
+    `start_date_tnr` TEXT,
+    `end_date_tnr` TEXT,
+    `leased_area` DOUBLE DEFAULT NULL,
+    `build_phase` DOUBLE DEFAULT NULL,
+    `rent_sqm` DOUBLE DEFAULT NULL,
+    `2009-09-30` DOUBLE DEFAULT NULL,
+    `2009-10-31` DOUBLE DEFAULT NULL,
+    `2009-11-30` DOUBLE DEFAULT NULL,
+    `2009-12-31` DOUBLE DEFAULT NULL,
+    `2010-01-31` DOUBLE DEFAULT NULL,
+    `2010-02-28` DOUBLE DEFAULT NULL,
+    `2010-03-31` DOUBLE DEFAULT NULL,
+    `2010-04-30` DOUBLE DEFAULT NULL,
+    `2010-05-31` DOUBLE DEFAULT NULL,
+    `2010-06-30` DOUBLE DEFAULT NULL,
+    `2010-07-31` DOUBLE DEFAULT NULL,
+    `2010-08-31` DOUBLE DEFAULT NULL,
+    `2010-09-30` DOUBLE DEFAULT NULL,
+    `2010-10-31` DOUBLE DEFAULT NULL,
+    `2010-11-30` DOUBLE DEFAULT NULL,
+    `2010-12-31` DOUBLE DEFAULT NULL,
+    `2011-01-31` DOUBLE DEFAULT NULL,
+    `2011-02-28` DOUBLE DEFAULT NULL,
+    `2011-03-31` DOUBLE DEFAULT NULL,
+    `2011-04-30` DOUBLE DEFAULT NULL,
+    `2011-05-31` DOUBLE DEFAULT NULL,
+    `2011-06-30` DOUBLE DEFAULT NULL,
+    `2011-07-31` DOUBLE DEFAULT NULL,
+    `2011-08-31` DOUBLE DEFAULT NULL,
+        PRIMARY KEY (`tenant_name`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO Mega_sales (tenant_name,category,subcategory,premise,Category_sqm,tnr_tenant,tnr_perc,start_date_tnr,end_date_tnr,leased_area,build_phase,rent_sqm,`2009-09-30`,`2009-10-31`,`2009-11-30`,`2009-12-31`,`2010-01-31`,`2010-02-28`,`2010-03-31`,`2010-04-30`,`2010-05-31`,`2010-06-30`,`2010-07-31`,`2010-08-31`,`2010-09-30`,`2010-10-31`,`2010-11-30`,`2010-12-31`,`2011-01-31`,`2011-02-28`,`2011-03-31`,`2011-04-30`,`2011-05-31`,`2011-06-30`,`2011-07-31`,`2011-08-31`) VALUES
+	 ('AND STYLE','Clothing','Family fashion','M07_2040','100<X<250','yes',10.0,'2010-04-07','2010-07-31',121.0,1.0,40000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,405650.5,826611.5,1113802.2,1852296.0,1690702.0,1587522.0,2494672.0,1658219.5,2253078.6,2139039.2,2135836.0,1562078.0,1716516.0,1578673.42,1650573.0,2139047.0,2057628.0),
+	 ('1C INTERES','Home appliances','Computer/ software','M13_4116','100<X<250','yes',7.0,'2009-07-31','2012-07-31',111.6,2.0,55000.0,1890005.0,2106227.0,2670163.0,3964761.0,3117771.0,2158650.0,2647718.0,1796384.0,1999322.0,1858177.0,2169222.0,2543620.0,2300552.0,3088001.0,3235078.0,4819740.0,4425833.0,3108845.0,3204421.0,2752651.0,2744400.0,2692632.0,2642118.0,2855399.0);
+
+-- UPDATE RENT RATES FROM ANCHORS DUE TO KNIGHT FRANKS ANALYSIS FOR 2011 --
+update mega_sales ms set rent_sqm=4500
+where tenant_name='Auchan';
+update mega_sales ms  set rent_sqm=3000
+where tenant_name='IKEA';
+
+-- UPDATE COSMETICS SUBCATEGORY / SEPHORA --
+SELECT 
+    tenant_name,
+    category_sqm,
+    leased_area,
+    rent_sqm
+FROM mega_sales tsv
+WHERE subcategory = 'Cosmetics'
+  AND category_sqm IN ('100<X<250', '250<X<500')
+ORDER BY category_sqm, leased_area DESC;
+
+
+SELECT ROUND(AVG(rent_sqm), 2) AS avg_rent_sqm_cosmetics
+FROM mega_sales
+WHERE subcategory = 'Cosmetics'
+  AND category_sqm IN ('100<X<250', '250<X<500')
+  AND rent_sqm IS NOT NULL 
+  AND rent_sqm > 0;
+
+
