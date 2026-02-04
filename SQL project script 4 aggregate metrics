@@ -1,0 +1,167 @@
+Creation of Aggregate Metrics.
+-- TOTAL OCCUPIED GLA --
+select round(sum(leased_area),0) as GLA_info from mega_sales;
+
+-- TOTAL SALES PER CATEGORY FY2010, FY 2011 --
+select category, sum(sales_2010) as total_sales_2010, sum(sales_2011) as total_sales_2011 from mega_sales ms 
+group by category
+order by category asc;
+
+-- TOTAL SALES PER SUBCATEGORY FY2010, FY 2011 --
+select subcategory, sum(sales_2010) as total_sales_2010, sum(sales_2011) as total_sales_2011 from mega_sales ms 
+group by subcategory
+order by subcategory asc;
+
+-- TOTAL SALES OVERALL --
+select sum(sales_2010)as sales_fy2010, sum(sales_2011) as sales_fy2011, (sum(sales_2010) + sum(sales_2011)) as total_sales_SC from mega_sales ms;
+
+-- TOTAL FIXED RENT PER CATEGORY AND OVERALL --
+select category, sum(rent_per_year) as rent_paid from mega_sales ms 
+group by category;
+
+select sum(rent_per_year) as rent_SC from mega_sales ms;
+
+-- TNR FEE FOR 2010, 2011 --
+select sum(rent_per_year) as rent_SC, sum(tnr_fee2010) as variable_rent2010, sum(tnr_fee2011) as variable_rent2011,
+(sum(rent_per_year)+sum(tnr_fee2010)) as total_rent2010, (sum(rent_per_year)+sum(tnr_fee2011)) as total_rent2011,
+round(sum(tnr_fee2010)/sum(rent_per_year)*100,0) as rent_perc2010, round(sum(tnr_fee2011)/sum(rent_per_year)*100,0) as rent_perc2011, round(sum(rent_per_year)-sum(tnr_fee2010),0) as net_income2010,
+round(sum(rent_per_year)-sum(tnr_fee2011),0) as net_income2011 from mega_sales ms;
+
+-- AVERAGE RENT PER SQM BY CATEGORY--
+select category, round(avg(rent_sqm),0) as avg_rent, round(avg(leased_area),0) as avg_leased_area, count(tenant_name) as number_of_tenants
+from mega_sales ms 
+group by category
+order by avg_rent desc;
+
+select subcategory, category_sqm, round(avg(rent_sqm),0) as avg_rent, round(avg(leased_area),0) as avg_leased_area, count(tenant_name) as number_of_tenants
+from mega_sales ms 
+group by subcategory, category_sqm
+order by number_of_tenants desc;
+
+-- CHECK AVG OR MIDDLE -- 
+select tenant_name,category_sqm, rent_sqm from mega_sales ms 
+where subcategory= 'Family fashion'
+order by category_sqm asc, rent_sqm asc;
+
+-- MEDIAN RENT PER SQM BY SUBCATEGORY AND CATEGORY_ SQM -- 
+WITH filtered AS (
+    SELECT 
+    	subcategory,
+        Category_sqm,
+        rent_sqm,
+        ROW_NUMBER() OVER (PARTITION BY subcategory, Category_sqm ORDER BY rent_sqm) AS rn,
+        COUNT(*) OVER (PARTITION by subcategory, Category_sqm) AS cnt
+    FROM mega_sales
+    WHERE rent_sqm IS NOT NULL
+)
+SELECT 
+subcategory,
+    Category_sqm,
+    round(AVG(CASE 
+        WHEN rn IN (FLOOR((cnt + 1)/2), CEILING((cnt + 1)/2)) 
+        THEN 1.0 * rent_sqm 
+        ELSE NULL 
+    END),0) AS median_rent_sqm,
+        COUNT(*) AS tenant_count,
+        round(AVG(rent_sqm),0) AS avg_rent_sqm,
+    round(MIN(rent_sqm),0) AS min_rent_sqm,
+    round(MAX(rent_sqm),0) AS max_rent_sqm
+FROM filtered
+GROUP BY subcategory,Category_sqm
+ORDER BY tenant_count desc,
+    CASE Category_sqm 
+        WHEN '<50'          THEN 1
+        WHEN '50<X<100'     THEN 2
+        WHEN '100<X<250'    THEN 3
+        WHEN '250<X<500'    THEN 4
+        WHEN '500<X<1000'   THEN 5
+        WHEN '1000<X<2500'  THEN 6
+        WHEN '2500<X<5000'  THEN 7
+        ELSE 8 
+    end;
+
+-- SALES DENSITY --
+select subcategory,category_sqm, sum(leased_area) as leased_area, /*sum(sales_2010) as sales2010, sum(sales_2011) as sales2011, */
+round(sum(sales_2010)/ sum(leased_area),0) as sales_density2010, 
+round(sum(sales_2011)/ sum(leased_area),0) as sales_density2011
+from mega_sales ms 
+group by subcategory, category_sqm
+order by subcategory, category_sqm ;
+
+-- OCR FY2010 -- 
+create temporary table ocr_temp_table2010
+SELECT 
+    tenant_name,
+    category,
+    leased_area,
+    rent_per_year, 
+    rent_sqm,
+    start_date_tnr,
+    '2010-08-31' AS fy2010_end, GREATEST(COALESCE(start_date_tnr, '2009-09-01'),'2009-09-01') AS effective_start_date,
+       GREATEST(0, DATEDIFF('2010-08-31', GREATEST(COALESCE(start_date_tnr, '2009-09-01'), '2009-09-01'))) AS days_active_in_fy2010,
+        ROUND(rent_per_year * GREATEST(0, DATEDIFF('2010-08-31', GREATEST(COALESCE(start_date_tnr, '2009-09-01'), '2009-09-01'))) / 365.0,
+        2) AS adjusted_rent_fy2010, sales_2010 AS total_sales_fy2010,
+        ROUND( CASE 
+	        WHEN sales_2010 <= 0 OR sales_2010 IS NULL THEN NULL
+            ELSE (rent_per_year * GREATEST(0, DATEDIFF('2010-08-31', GREATEST(COALESCE(start_date_tnr, '2009-09-01'), '2009-09-01'))) / 365.0) 
+                / sales_2010 * 100 
+        END,2) AS adjusted_OCR_fy2010_percent
+FROM mega_sales
+WHERE sales_2010 IS NOT NULL
+ORDER BY adjusted_OCR_fy2010_percent DESC;
+
+select tenant_name, adjusted_OCR_fy2010_percent from ocr_temp_table2010
+order by adjusted_OCR_fy2010_percent desc;
+
+select tenant_name, ocr_2010, ocr_2011 from mega_sales ms
+order by Ocr_2010 desc; 
+
+-- OCR FY2011 -- 
+create temporary table ocr_temp_table2011
+SELECT 
+    tenant_name,
+    category,
+    leased_area,
+    rent_sqm,
+    rent_per_year,
+    start_date_tnr,
+    '2011-08-31' AS fy2011_end,
+            GREATEST(
+        COALESCE(start_date_tnr, '2010-09-01'),
+        '2010-09-01'
+    ) AS effective_start_date,
+        GREATEST(
+        0,
+        DATEDIFF('2011-08-31', GREATEST(COALESCE(start_date_tnr, '2010-09-01'), '2010-09-01'))
+    ) AS days_active_in_fy2011,
+        ROUND(
+        rent_per_year * 
+        GREATEST(0, DATEDIFF('2011-08-31', GREATEST(COALESCE(start_date_tnr, '2010-09-01'), '2010-09-01'))) / 365.0,
+        2
+    ) AS adjusted_rent_fy2011,
+        sales_2011 AS total_sales_fy2011,
+    ROUND(
+        CASE 
+            WHEN sales_2011 <= 0 OR sales_2011 IS NULL THEN NULL
+            ELSE 
+                (rent_per_year * GREATEST(0, DATEDIFF('2011-08-31', GREATEST(COALESCE(start_date_tnr, '2010-09-01'), '2010-09-01'))) / 365.0) 
+                / sales_2011 * 100 
+        END,
+        2
+    ) AS adjusted_OCR_fy2011_percent
+FROM mega_sales
+WHERE sales_2011 IS NOT NULL
+ORDER BY adjusted_OCR_fy2011_percent DESC;
+
+select * from ocr_temp_table2011;
+
+-- AVERAGE TURNOVER PERCENT PER CATEGORIES, SUBCATEGORIES --
+select category, category_sqm, count(tenant_name) as number_tenants, round(avg(tnr_perc),0) as AVG_tnr_perc, min(tnr_perc) as min_tnr_perc, max(tnr_perc) as max_tnr_perc
+from mega_sales ms 
+group by category, category_sqm
+order by number_tenants desc, avg_tnr_perc desc;
+
+select subcategory, category_sqm, count(tenant_name) as number_tenants, round(avg(tnr_perc),0) as AVG_tnr_perc, min(tnr_perc) as min_tnr_perc, max(tnr_perc) as max_tnr_perc
+from mega_sales ms 
+group by subcategory, category_sqm
+order by max_tnr_perc desc; 
