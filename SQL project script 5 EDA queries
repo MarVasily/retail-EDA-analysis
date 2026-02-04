@@ -1,0 +1,95 @@
+-- GROSS TORNOVER PER MONTH BY SUBCATEGORY --
+SELECT '2009-09' as month_sales, subcategory, 
+ROUND(SUM(`2009-09-30`),0) AS sales_res FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2009-10', subcategory, round(SUM(`2009-10-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2009-11', subcategory, round(SUM(`2009-11-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2009-12', subcategory, round(SUM(`2009-12-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-01', subcategory, round(SUM(`2010-01-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-02', subcategory, round(SUM(`2010-02-28`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-03', subcategory, round(SUM(`2010-03-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-04', subcategory, round(SUM(`2010-04-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-05', subcategory, round(SUM(`2010-05-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-06', subcategory, round(SUM(`2010-06-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-07', subcategory, round(SUM(`2010-07-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-08', subcategory, round(SUM(`2010-08-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-09', subcategory, round(SUM(`2010-09-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-10', subcategory, round(SUM(`2010-10-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-11', subcategory, round(SUM(`2010-11-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-12', subcategory, round(SUM(`2010-12-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-01', subcategory, round(SUM(`2011-01-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-02', subcategory, round(SUM(`2011-02-28`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-03', subcategory, round(SUM(`2011-03-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-04', subcategory, round(SUM(`2011-04-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-05', subcategory, round(SUM(`2011-05-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-06', subcategory, round(SUM(`2011-06-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-07', subcategory, round(SUM(`2011-07-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-08', subcategory, round(SUM(`2011-08-31`),0) FROM mega_sales GROUP BY subcategory
+ORDER BY subcategory, month_sales;
+
+-- AVERAGE TURNOVER PER MONTH BY SUBCATEGORY --
+SELECT '2009-09' as month_sales, subcategory, 
+ROUND(AVG(`2009-09-30`),0) AS sales_res FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2009-10', subcategory, round(AVG(`2009-10-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2009-11', subcategory, round(AVG(`2009-11-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2009-12', subcategory, round(AVG(`2009-12-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-01', subcategory, round(AVG(`2010-01-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-02', subcategory, round(AVG(`2010-02-28`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-03', subcategory, round(AVG(`2010-03-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-04', subcategory, round(AVG(`2010-04-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-05', subcategory, round(AVG(`2010-05-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-06', subcategory, round(AVG(`2010-06-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-07', subcategory, round(AVG(`2010-07-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-08', subcategory, round(AVG(`2010-08-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-09', subcategory, round(AVG(`2010-09-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-10', subcategory, round(AVG(`2010-10-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-11', subcategory, round(AVG(`2010-11-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2010-12', subcategory, round(AVG(`2010-12-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-01', subcategory, round(AVG(`2011-01-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-02', subcategory, round(AVG(`2011-02-28`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-03', subcategory, round(AVG(`2011-03-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-04', subcategory, round(AVG(`2011-04-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-05', subcategory, round(AVG(`2011-05-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-06', subcategory, round(AVG(`2011-06-30`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-07', subcategory, round(AVG(`2011-07-31`),0) FROM mega_sales GROUP BY subcategory UNION ALL
+SELECT '2011-08', subcategory, round(AVG(`2011-08-31`),0) FROM mega_sales GROUP BY subcategory
+ORDER BY subcategory, month_sales;
+
+
+-- PERCENTAGE OF MONTHS WITH 0 SALES BY TENANT --
+SELECT
+    tenant_name,
+    category,
+    zero_months_count,
+    ROUND(zero_months_count / 24.0 * 100, 1) AS zero_months_percent,
+    start_date_tnr,
+    end_date_tnr
+FROM (
+    SELECT *,
+        (CASE WHEN `2009-09-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2009-10-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2009-11-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2009-12-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-01-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-02-28` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-03-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-04-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-05-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-06-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-07-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-08-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-09-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-10-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-11-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2010-12-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-01-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-02-28` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-03-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-04-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-05-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-06-30` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-07-31` IN (0,NULL) THEN 1 ELSE 0 END +
+         CASE WHEN `2011-08-31` IN (0,NULL) THEN 1 ELSE 0 END) AS zero_months_count
+    FROM mega_sales
+) AS t                     
+WHERE zero_months_count > 0    
+ORDER BY zero_months_count DESC;
